@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useEvents } from "../../hooks/useEvents";
 import { SelectionBar } from "./SelectionBar";
+import { useOrganiser } from "../../state/OrganiserContext";
 import { KaiEventList } from "./KaiEventList";
 
 /**
@@ -9,11 +10,14 @@ import { KaiEventList } from "./KaiEventList";
  */
 export function FeedScreen() {
   const { events, error, loading, reload } = useEvents();
+  const { organiser } = useOrganiser();
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<"mine" | "all">("all");
 
   // Derived during render rather than held in state, so there is only ever one
   // source of truth for what is on screen.
   const visible = (events ?? [])
+    .filter((event) => scope === "all" || event.postedById === organiser.id)
     .filter((event) =>
       `${event.name} ${event.location}`
         .toLowerCase()
@@ -25,6 +29,23 @@ export function FeedScreen() {
       <header className="screen__header">
         <h2>Events</h2>
       </header>
+
+      <div className="scope" role="group" aria-label="Which events">
+        <button
+          type="button"
+          aria-pressed={scope === "mine"}
+          onClick={() => setScope("mine")}
+        >
+          My events
+        </button>
+        <button
+          type="button"
+          aria-pressed={scope === "all"}
+          onClick={() => setScope("all")}
+        >
+          All events
+        </button>
+      </div>
 
       <label className="search">
         <span className="search__label">Search events</span>
@@ -59,8 +80,16 @@ export function FeedScreen() {
 
       {!loading && !error && visible.length === 0 && (
         <div className="state state--empty">
+          {/* Three ways to be empty, and they mean different things. */}
           {query ? (
             <p>{`No events match \u201C${query}\u201D.`}</p>
+          ) : scope === "mine" ? (
+            <>
+              <p>{`${organiser.name} hasn\u2019t posted anything yet.`}</p>
+              <p className="state__hint">
+                Post an event, or switch to All events to see the rest of campus.
+              </p>
+            </>
           ) : (
             <>
               <p>No free kai on campus right now.</p>
