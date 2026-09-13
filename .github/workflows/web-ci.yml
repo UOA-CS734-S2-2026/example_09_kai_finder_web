@@ -1,0 +1,53 @@
+# The pipeline the Tuesday lecture walks through line by line, and the one
+# Lab 05 asks each team to add to their own repo.
+#
+# Path filters matter here: this is a monorepo. Without them, a change to a
+# Dart file in app/ would rebuild the web client for no reason.
+name: web-ci
+
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/web-ci.yml"]
+  pull_request:
+    paths: ["web/**", ".github/workflows/web-ci.yml"]
+
+# Cancel a run when the same branch is pushed again. Saves runner minutes when
+# someone pushes five times in a row.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege. The default token can write to the repo; this one cannot.
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # `npm ci`, not `npm install`: it fails if package.json and the lockfile
+      # disagree, and it wipes node_modules first. Reproducibility.
+      - run: npm ci
+
+      # Cheapest first, so a missing semicolon does not cost eight minutes.
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+          retention-days: 7
