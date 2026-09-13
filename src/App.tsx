@@ -1,20 +1,21 @@
-import { KaiEventList } from "./features/feed/KaiEventList";
-import { SelectionBar } from "./features/feed/SelectionBar";
+import { FeedScreen } from "./features/feed/FeedScreen";
 import { SelectionProvider } from "./state/SelectionContext";
-import { sampleEvents } from "./data/fake_event_repository";
+import { RepositoryProvider } from "./state/RepositoryContext";
+import type { EventRepository } from "./data/event_repository";
 
-export function App() {
+export function App({ repository }: { repository?: EventRepository } = {}) {
   return (
-    <SelectionProvider>
-      <div className="app">
-        <header className="app__bar">
-          <h1>Kai Finder {"\u00B7"} Organiser</h1>
-        </header>
-        <main className="app__main">
-          <SelectionBar events={sampleEvents} />
-          <KaiEventList events={sampleEvents} />
-        </main>
-      </div>
-    </SelectionProvider>
+    <RepositoryProvider repository={repository}>
+      <SelectionProvider>
+        <div className="app">
+          <header className="app__bar">
+            <h1>Kai Finder {"\u00B7"} Organiser</h1>
+          </header>
+          <main className="app__main">
+            <FeedScreen />
+          </main>
+        </div>
+      </SelectionProvider>
+    </RepositoryProvider>
   );
 }
