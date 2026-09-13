@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../../App";
 import { FakeEventRepository } from "../../data/fake_event_repository";
+import { ORGANISERS } from "../../data/kai_user";
 
 async function openPostScreen(repository: FakeEventRepository) {
   const user = userEvent.setup();
@@ -76,7 +77,8 @@ describe("who posted it", () => {
 
   it("says out loud who it is about to post as", async () => {
     const user = await openPostScreen(new FakeEventRepository());
-    await user.selectOptions(screen.getByLabelText("Acting as"), "u4");
-    expect(screen.getByText(/posting as/i)).toHaveTextContent(/sam/i);
+    const organiser = ORGANISERS[3];
+    await user.selectOptions(screen.getByLabelText("Acting as"), organiser.id);
+    expect(screen.getByText(/posting as/i)).toHaveTextContent(organiser.name);
   });
 });

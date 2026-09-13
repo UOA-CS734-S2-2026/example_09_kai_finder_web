@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../../App";
 import { FakeEventRepository, sampleEvents } from "../../data/fake_event_repository";
+import { ORGANISERS } from "../../data/kai_user";
 
 /**
  * These drive the whole App with a FakeEventRepository injected, so nothing
@@ -201,19 +202,20 @@ describe("organisers", () => {
 
   it("distinguishes an organiser with no events from an empty campus", async () => {
     const user = userEvent.setup();
-    // Campus is busy, but Mei (u3) has posted nothing.
+    const organiser = ORGANISERS[2];
     renderApp(
-      new FakeEventRepository(sampleEvents.filter((e) => e.postedById !== "u3")),
+      new FakeEventRepository(
+        sampleEvents.filter((e) => e.postedById !== organiser.id),
+      ),
     );
     await screen.findByText("Free samosas");
 
     await user.click(screen.getByRole("button", { name: "My events" }));
-    await user.selectOptions(screen.getByLabelText("Acting as"), "u3");
+    await user.selectOptions(screen.getByLabelText("Acting as"), organiser.id);
     expect(
-      await screen.findByText(/mei hasn.t posted anything yet/i),
+      await screen.findByText(new RegExp(`${organiser.name} hasn.t posted`, "i")),
     ).toBeInTheDocument();
 
-    // Switching scope shows a different message: the campus is not empty.
     await user.click(screen.getByRole("button", { name: "All events" }));
     expect(screen.queryByText(/hasn.t posted anything yet/i)).not.toBeInTheDocument();
     expect(screen.getByText("Free samosas")).toBeInTheDocument();
