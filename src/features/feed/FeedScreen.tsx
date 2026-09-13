@@ -1,9 +1,24 @@
+import { useState } from "react";
 import { useEvents } from "../../hooks/useEvents";
 import { SelectionBar } from "./SelectionBar";
 import { KaiEventList } from "./KaiEventList";
 
+/**
+ * The event feed, covering all four states a remote read can be in: loading,
+ * error, empty and data.
+ */
 export function FeedScreen() {
-  const { events, loading } = useEvents();
+  const { events, error, loading, reload } = useEvents();
+  const [query, setQuery] = useState("");
+
+  // Derived during render rather than held in state, so there is only ever one
+  // source of truth for what is on screen.
+  const visible = (events ?? [])
+    .filter((event) =>
+      `${event.name} ${event.location}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()),
+    );
 
   return (
     <section>
@@ -11,13 +26,53 @@ export function FeedScreen() {
         <h2>Events</h2>
       </header>
 
-      {loading && <p>Loading\u2026</p>}
-      {!loading && events && (
-        <>
-          <SelectionBar events={events} />
-          <KaiEventList events={events} />
-        </>
+      <label className="search">
+        <span className="search__label">Search events</span>
+        <input
+          type="search"
+          value={query}
+          placeholder="samosas, quad, ..."
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </label>
+
+      {loading && (
+        <div className="skeleton" role="status" aria-live="polite">
+          <span className="visually-hidden">Loading events</span>
+          <div className="skeleton__row" />
+          <div className="skeleton__row" />
+          <div className="skeleton__row" />
+        </div>
       )}
+
+      {!loading && error && (
+        <div className="state state--error" role="alert">
+          <p>Couldn&rsquo;t reach the Kai server.</p>
+          <p className="state__hint">
+            Check it is running on port 3734, then try again.
+          </p>
+          <button type="button" onClick={reload}>
+            Try again
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && visible.length === 0 && (
+        <div className="state state--empty">
+          {query ? (
+            <p>{`No events match \u201C${query}\u201D.`}</p>
+          ) : (
+            <>
+              <p>No free kai on campus right now.</p>
+              <p className="state__hint">Post an event to let everyone know.</p>
+            </>
+          )}
+        </div>
+      )}
+
+      <SelectionBar events={visible} />
+
+      {!loading && !error && visible.length > 0 && <KaiEventList events={visible} />}
     </section>
   );
 }
