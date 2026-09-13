@@ -1,53 +1,48 @@
-# The pipeline the Tuesday lecture walks through line by line, and the one
-# Lab 05 asks each team to add to their own repo.
-#
-# Path filters matter here: this is a monorepo. Without them, a change to a
-# Dart file in app/ would rebuild the web client for no reason.
+# Runs the same checks a person would run locally, on a clean machine, on
+# every push to main and every pull request.
 name: web-ci
 
 on:
   push:
     branches: [main]
-    paths: ["web/**", ".github/workflows/web-ci.yml"]
   pull_request:
-    paths: ["web/**", ".github/workflows/web-ci.yml"]
 
-# Cancel a run when the same branch is pushed again. Saves runner minutes when
-# someone pushes five times in a row.
+# A new run on the same branch cancels the one still in progress, so five
+# pushes in a minute produce one run rather than five.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Least privilege. The default token can write to the repo; this one cannot.
+# The automatic token can write to the repository by default. This job only
+# needs to read it.
 permissions:
   contents: read
 
 jobs:
   quality:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
+          # Caches the npm download directory between runs, keyed on the
+          # lockfile so a dependency change gets a fresh install.
           cache: npm
-          cache-dependency-path: web/package-lock.json
 
-      # `npm ci`, not `npm install`: it fails if package.json and the lockfile
-      # disagree, and it wipes node_modules first. Reproducibility.
+      # npm ci, not npm install: it fails if package.json and the lockfile
+      # disagree, and installs from an empty node_modules.
       - run: npm ci
 
-      # Cheapest first, so a missing semicolon does not cost eight minutes.
+      # Cheapest first, so a type error does not wait behind the test suite.
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
 
-      - uses: actions/upload-artifact@v4
+      # The runner is destroyed when the job ends, so keep the build output.
+      - uses: actions/upload-artifact@v5
         with:
           name: web-dist
-          path: web/dist
+          path: dist
           retention-days: 7
