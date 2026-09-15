@@ -31,7 +31,7 @@ export function kaiEventFromJson(json: unknown): KaiEvent {
     throw new Error("Expected an event object");
   }
   const j = json as Record<string, unknown>;
-  const portionsLeft = String(j.portionsLeft ?? 0);
+  const portionsLeft = Number(j.portionsLeft ?? 0);
   return {
     id: String(j.id),
     name: String(j.name),
