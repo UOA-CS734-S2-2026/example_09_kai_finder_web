@@ -30,9 +30,9 @@ const SEED = [
 // `dept`, not `department` -- that is what the GraphQL schema calls it.
 const USERS = [
   { id: "u1", name: "Priya", dept: "Engineering" },
-  { id: "u2", name: "Tane",  dept: "Science" },
-  { id: "u3", name: "Mei",   dept: "Business" },
-  { id: "u4", name: "Sam",   dept: "Arts" },
+  { id: "u2", name: "Tama",  dept: "Computer Science" },
+  { id: "u3", name: "Mei",   dept: "Science" },
+  { id: "u4", name: "Josh",   dept: "Business School" },
 ];
 
 let events = SEED.map((e) => ({ ...e }));
@@ -136,6 +136,13 @@ async function handleGraphql(req, res) {
     event.portionsLeft = Math.max(0, event.portionsLeft - 1);
     return send(res, 200, { data: { eatPortion: withIsActive(event) } });
   }
+  if (query.includes("deleteEvent")) {
+    const index = events.findIndex((e) => e.id === variables.id);
+    if (index === -1) return send(res, 200, { data: { deleteEvent: null } });
+    const [removed] = events.splice(index, 1);
+    console.log(`  delete: ${removed.name}`);
+    return send(res, 200, { data: { deleteEvent: removed.id } });
+  }
   if (/\bevent\s*\(/.test(query)) {
     const event = findEvent(variables.id);
     return event
@@ -206,6 +213,15 @@ const server = createServer(async (req, res) => {
     return send(res, 200, withIsActive(event));
   }
 
+  match = path.match(/^\/events\/([^/]+)$/);
+  if (method === "DELETE" && match) {
+    const index = events.findIndex((e) => e.id === match[1]);
+    if (index === -1) return send(res, 404, { error: "not found" });
+    const [removed] = events.splice(index, 1);
+    console.log(`  delete: ${removed.name}`);
+    return send(res, 200, { ok: true, id: removed.id });
+  }
+
   if (method === "GET" && path === "/users") return send(res, 200, USERS);
 
   match = path.match(/^\/users\/([^/]+)$/);
@@ -237,7 +253,7 @@ server.listen(PORT, () => {
     GET  /events/:id          one event
     POST /events/:id/eat      take a portion
     POST /events              create (REST)
-    POST /graphql             events, event, eatPortion, postEvent
+    POST /graphql             events, event, eatPortion, postEvent, deleteEvent
     POST /reset               back to the seed data
     GET  /users               the four organisers
     GET  /health
